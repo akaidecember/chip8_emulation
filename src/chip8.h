@@ -35,6 +35,9 @@ class chip8{
         array<uint8_t, GFX_BUFFER_SIZE> gfx_buffer;        
         bool drawingFlag;
 
-        void emulate();
+        void emulateCycle();
+        void processOpcode();
+        void initOpcodeHandlers();
+        void updateTimers();
 		bool loadApp(const string &filename);
 };

@@ -3,6 +3,8 @@
 #include <random>
 #include <time.h>
 #include <sys/stat.h>
+#include <functional>
+#include <unordered_map>
 #include "chip8.h"
 
 using namespace::std;
@@ -27,6 +29,9 @@ unsigned char chip8_fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  //F
 };
 
+using OpcodeHandler = std::function<void(uint16_t)>;
+std::unordered_map<uint16_t, OpcodeHandler> opcodeHandlers;
+
 // Function to initialize the chip8 vir. cpu state
 void chip8::initialize(){
 
@@ -39,6 +44,7 @@ void chip8::initialize(){
     stk_ptr = 0;
 
     // Clearing the stack, V-registers and the keypad
+    // Used STK_SIZE = 16, but can use others. They're same
     for(int i = 0; i < STK_SIZE; i++){
         stack[i] = V_reg[i] = keypad[i] = 0;
     }
@@ -65,13 +71,13 @@ void chip8::initialize(){
 }
 
 // Function to load a given program for chip8 into memory
-bool chip8::loadApp(const string& filename) {
+bool chip8::loadApp(const string& filename){
 
     initialize();
     cout << "Loading: " << filename << endl;
 
     ifstream file(filename, ios::binary);
-    if (!file.is_open()) {
+    if (!file.is_open()){
         cerr << "Error opening file." << endl;
         return false;
     }
@@ -82,13 +88,13 @@ bool chip8::loadApp(const string& filename) {
 
     // Allocate memory to contain the whole file
     vector<char> buffer(fileSize);
-    if (!file.read(buffer.data(), fileSize)) {
+    if (!file.read(buffer.data(), fileSize)){
         cerr << "Error reading file." << endl;
         return false;
     }
 
     // Check if the ROM fits into Chip8 memory
-    if (fileSize > (MEMORY_SIZE - 512)) {
+    if (fileSize > (MEMORY_SIZE - 512)){
         cerr << "Error: ROM too big for memory." << endl;
         return false;
     }
@@ -97,5 +103,163 @@ bool chip8::loadApp(const string& filename) {
     copy(buffer.begin(), buffer.end(), memory.begin() + 512);
 
     return true;
-    
+
+}
+
+void chip8::initOpcodeHandlers(){
+
+    // 0x0000
+    opcodeHandlers[0x0000] = [this](uint16_t opcode){
+        switch(opcode & 0x000F) {
+            case 0x0000: 
+                for(int i = 0; i < GFX_BUFFER_SIZE; ++i){
+				    gfx_buffer[i] = 0x0;
+                }
+				drawingFlag = true;
+				prog_ctr += 2;
+                break;
+            case 0x000E: 
+                --stk_ptr;
+                prog_ctr = stack[stk_ptr];
+                prog_ctr += 2;
+                break;
+            default:
+                cout << "Unknown opcode " << opcode << endl;
+                break;
+        }
+    };
+
+    // 0x1000
+    opcodeHandlers[0x1000] = [this](uint16_t opcode){
+        prog_ctr = opcode & 0x0FFF;
+    };
+
+    // 0x2000
+    opcodeHandlers[0x2000] = [this](uint16_t opcode){
+        stack[stk_ptr] = prog_ctr;
+        ++stk_ptr;
+        prog_ctr = opcode & 0x0FFF;
+    };
+
+    // 0x3000
+    opcodeHandlers[0x3000] = [this](uint16_t opcode){
+        if(V_reg[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF)){
+            prog_ctr += 4;
+        }
+        else{
+            prog_ctr += 2;
+        }
+    };
+
+    // 0x4000
+    opcodeHandlers[0x4000] = [this](uint16_t opcode){
+        if(V_reg[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF)){
+            prog_ctr += 4;
+        }
+        else{
+            prog_ctr += 2;
+        }
+    };
+
+    // 0x5000
+    opcodeHandlers[0x5000] = [this](uint16_t opcode){
+        if(V_reg[(opcode & 0x0F00) >> 8] == V_reg[(opcode & 0x00F0) >> 4]){
+            prog_ctr += 4;
+        }
+        else{
+            prog_ctr += 2;
+        }
+    };
+
+    // 0x6000
+    opcodeHandlers[0x6000] = [this](uint16_t opcode){
+        V_reg[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+        prog_ctr += 2;
+    };
+
+    // 0x7000
+    opcodeHandlers[0x7000] = [this](uint16_t opcode){
+        V_reg[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
+		prog_ctr += 2;
+    };
+
+    // 0x8000
+    opcodeHandlers[0x8000] = [this](uint16_t opcode){
+        switch(opcode & 0x000F) {
+            case 0x0000: 
+                V_reg[(opcode & 0x0F00) >> 8] = V_reg[(opcode & 0x00F0) >> 4];
+				prog_ctr += 2;
+                break;
+            case 0x0001:
+                V_reg[(opcode & 0x0F00) >> 8] |= V_reg[(opcode & 0x00F0) >> 4];
+                prog_ctr += 2;
+                break;
+            case 0x0002:
+                V_reg[(opcode & 0x0F00) >> 8] &= V_reg[(opcode & 0x00F0) >> 4];
+                prog_ctr += 2;
+                break;
+            case 0x0003:
+                V_reg[(opcode & 0x0F00) >> 8] ^= V_reg[(opcode & 0x00F0) >> 4];
+                prog_ctr += 2;
+                break;
+            case 0x0004:
+                if(V_reg[(opcode & 0x00F0) >> 4] > (0xFF - V_reg[(opcode & 0x0F00) >> 8])){
+                    V_reg[0xF] = 1;
+                }
+                else{
+                    V_reg[0xF] = 0;
+                }
+                V_reg[(opcode & 0x0F00) >> 8] += V_reg[(opcode & 0x00F0) >> 4];
+                prog_ctr += 2;
+                break;
+
+            // Insert more opcode function defn. here. $$$$$$$$$$$$$$$
+
+
+            case 0x000E: 
+				V_reg[0xF] = V_reg[(opcode & 0x0F00) >> 8] >> 7;
+				V_reg[(opcode & 0x0F00) >> 8] <<= 1;
+				prog_ctr += 2;
+                break;
+            default:
+                cout << "Unknown opcode " << opcode << endl;
+                break;
+        }
+    };
+
+}
+
+// Function to emulate single cycle
+void chip8::emulateCycle(){
+    opcode = memory[prog_ctr] << 8 | memory[prog_ctr + 1];
+    processOpcode();
+    updateTimers();
+}
+
+void chip8::processOpcode(){
+
+    uint16_t opcodePrefix = opcode & 0xF000;
+    // Find corresponding handler in the map
+    auto it = opcodeHandlers.find(opcodePrefix);
+
+    if (it != opcodeHandlers.end()){
+        it->second(opcode);
+    } else{
+        cout << "Unknown Opcode: " << opcode << endl;
+    }
+}
+
+void chip8::updateTimers(){
+
+    if (delay_timer > 0){
+        --delay_timer;
+    }
+
+    if (sound_timer > 0){
+        if (sound_timer == 1){
+            cout << "BEEP!" << endl;
+        }
+        --sound_timer;
+    }
+
 }
