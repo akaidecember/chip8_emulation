@@ -1,31 +1,40 @@
+#include <array>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <vector>
+
+using namespace::std;
+
 class chip8{
 
-    public:
-        unsigned char keypad[16];              // Keypad
-        unsigned char gfx_buffer[2048];     // Graphics Buffer (64 * 32 = 2048)
-
-        bool drawingFlag;
-        void emulate();
-		bool loadApp(const char * filename);
+    protected:
+        static constexpr size_t MEMORY_SIZE = 4096;
+        static constexpr size_t REG_CNT = 16;
+        static constexpr size_t STK_SIZE = 16;
+        static constexpr size_t GFX_BUFFER_SIZE = 64 * 32;
     
     private:
+        uint16_t opcode;              // Current OP code
+        uint16_t idx_reg;             // Index register
+        uint16_t prog_ctr;            // Program counter
 
-        unsigned short opcode;              // Current OP code
-        unsigned short idx_reg;             // Index register
-        unsigned short prog_ctr;            // Program counter
+        array<uint8_t, MEMORY_SIZE> memory;
+        array<uint8_t, REG_CNT> V_reg;
 
-        unsigned char memory[4096];         // Memory 4KB
-        unsigned char V_reg[16];            // V - registers
+        uint8_t delay_timer;
+        uint8_t sound_timer;
 
-        unsigned char delay_timer;
-        unsigned char sound_timer;
-
-        unsigned short stack[16];           // Stack alloc.
-        unsigned short stk_ptr;             // Stack pointer
+        array<uint16_t, STK_SIZE> stack;      
+        uint16_t stk_ptr;             
 
         void initialize();
 
-};
+    public:             
+        array<uint8_t, 16> keypad;
+        array<uint8_t, GFX_BUFFER_SIZE> gfx_buffer;        
+        bool drawingFlag;
 
-/*TOdo: Change static array allocation to dynamic using malloc and callc. Use free when necessary and define macros for sizes
-Defining macros somewhere will enable to be freed and malloced in some place.*/
+        void emulate();
+		bool loadApp(const string &filename);
+};
