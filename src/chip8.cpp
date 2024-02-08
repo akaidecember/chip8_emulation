@@ -29,8 +29,8 @@ unsigned char chip8_fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  //F
 };
 
-using OpcodeHandler = std::function<void(uint16_t)>;
-std::unordered_map<uint16_t, OpcodeHandler> opcodeHandlers;
+using OpcodeHandler = function<void(uint16_t)>;
+unordered_map<uint16_t, OpcodeHandler> opcodeHandlers;
 
 // Function to initialize the chip8 vir. cpu state
 void chip8::initialize(){
@@ -212,10 +212,31 @@ void chip8::initOpcodeHandlers(){
                 V_reg[(opcode & 0x0F00) >> 8] += V_reg[(opcode & 0x00F0) >> 4];
                 prog_ctr += 2;
                 break;
-
-            // Insert more opcode function defn. here. $$$$$$$$$$$$$$$
-
-
+            case 0x0005:
+                if(V_reg[(opcode & 0x00F0) >> 4] > V_reg[(opcode & 0x00F0) >> 8]){
+                    V_reg[0xF] = 0;
+                }
+                else{
+                    V_reg[0xF] = 1;
+                }
+                V_reg[(opcode & 0x0F00) >> 8] -= V_reg[(opcode & 0x00F0) >> 4];
+                prog_ctr += 2;
+                break;
+            case 0x0006:
+                V_reg[0xF] = V_reg[(opcode & 0x0F00) >> 8] & 0x1;
+                V_reg[(opcode & 0x0F00) >> 8] >>= 1;
+                prog_ctr += 2;
+                break;
+            case 0x0007:
+                if(V_reg[(opcode & 0x0F00) >> 8] > V_reg[(opcode & 0x00F0) >> 4]){
+                    V_reg[0xF] = 0;
+                }
+                else{
+                    V_reg[0xF] = 1;
+                }
+                V_reg[(opcode & 0x0F00) >> 8] = V_reg[(opcode & 0x00F0) >> 4] - V_reg[(opcode & 0x0F00) >> 8];				
+                prog_ctr += 2;
+                break;
             case 0x000E: 
 				V_reg[0xF] = V_reg[(opcode & 0x0F00) >> 8] >> 7;
 				V_reg[(opcode & 0x0F00) >> 8] <<= 1;
