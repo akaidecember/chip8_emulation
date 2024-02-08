@@ -82,6 +82,7 @@ bool chip8::loadApp(const string& filename){
         return false;
     }
 
+    // Calculating file size in bytes using seek method
     file.seekg(0, ios::end);
     streampos fileSize = file.tellg();
     file.seekg(0, ios::beg);
@@ -119,12 +120,12 @@ void chip8::initOpcodeHandlers(){
 				prog_ctr += 2;
                 break;
             case 0x000E: 
-                --stk_ptr;
+                stk_ptr--;
                 prog_ctr = stack[stk_ptr];
                 prog_ctr += 2;
                 break;
             default:
-                cout << "Unknown opcode " << opcode << endl;
+                cout << "Unknown opcode [0x0000]: 0x" << hex << opcode << endl;
                 break;
         }
     };
@@ -243,7 +244,152 @@ void chip8::initOpcodeHandlers(){
 				prog_ctr += 2;
                 break;
             default:
-                cout << "Unknown opcode " << opcode << endl;
+                cout << "Unknown opcode [0x8000]: 0x" << hex << opcode << endl;
+                break;
+        }
+    };
+
+    // 0x9000
+    opcodeHandlers[0x9000] = [this](uint16_t opcode){
+        if(V_reg[(opcode & 0x0F00) >> 8] != V_reg[(opcode & 0x00F0) >> 4]){
+            prog_ctr += 4;
+        }
+        else{
+            prog_ctr += 2;
+        }
+    };
+
+    // 0xA000
+    opcodeHandlers[0xA000] = [this](uint16_t opcode){
+        idx_reg = opcode & 0x0FFF;
+        prog_ctr += 2;
+    };
+
+    // 0xB000
+    opcodeHandlers[0xB000] = [this](uint16_t opcode){
+        prog_ctr = (opcode & 0x0FFF) + V_reg[0];
+    };
+
+    // 0xC000
+    opcodeHandlers[0xC000] = [this](uint16_t opcode){
+		V_reg[(opcode & 0x0F00) >> 8] = (rand() % 0xFF) & (opcode & 0x00FF);
+		prog_ctr += 2;
+    };
+
+    // 0xD000
+    opcodeHandlers[0xD000] = [this](uint16_t opcode){
+        const auto x_ax = V_reg[(opcode & 0x0F00) >> 8];
+        const auto y_ax = V_reg[(opcode & 0x00F0) >> 4];
+        const auto h = opcode & 0x000F;
+        uint16_t pixel;
+
+        V_reg[0xF] = 0;
+        for(int i = 0; i < h; i++){
+            pixel = memory[idx_reg + i];
+            for(int j = 0; j < 8; j++){
+                if(((0x80 >> j) & pixel) != 0){
+                    if(gfx_buffer[(x_ax + j + ((y_ax + i) * 64))] == 1){
+                        V_reg[0xF] = 1;
+                    }
+                    gfx_buffer[j + x_ax + ((y_ax + i) * 64)] ^= 1;
+                }
+            }
+        }
+        drawingFlag = true;
+        prog_ctr += 2;
+    };
+
+    // 0xE000
+    opcodeHandlers[0xE000] = [this](uint16_t opcode){
+        switch(opcode & 0x00FF) {
+            case 0x009E: 
+                if (keypad[V_reg[(opcode & 0x0F00) >> 8]] != 0){
+                    prog_ctr += 4;
+                }
+                else{
+                    prog_ctr += 2;
+                }
+                break;
+            case 0x00A1: 
+                if (keypad[V_reg[(opcode & 0x0F00) >> 8]] == 0){
+                    prog_ctr += 4;
+                }
+                else{
+                    prog_ctr += 2;
+                }
+                break;
+            default:
+                cout << "Unknown opcode [0xE000]: 0x" << hex << opcode << endl;
+                break;
+        }
+    };
+
+    // 0xF000
+    opcodeHandlers[0xF000] = [this](uint16_t opcode){
+        switch(opcode & 0x00FF) {
+            case 0x0007: 
+                V_reg[(opcode & 0x0F00) >> 8] = delay_timer;
+                prog_ctr += 2;
+                break;
+            case 0x000A: 
+            {
+                bool kp = false;
+                for(int i = 0; i < 16; ++i){
+                    if(keypad[i] != 0){
+                        V_reg[(opcode & 0x0F00) >> 8] = i;
+                        kp = true;
+                        break;
+                    }
+                }
+                if(!kp) return;
+
+                prog_ctr += 2;
+                break;
+            }
+            case 0x0015: 
+                delay_timer = V_reg[(opcode & 0x0F00) >> 8];
+                prog_ctr += 2;
+                break;
+            case 0x0018: 
+                sound_timer = V_reg[(opcode & 0x0F00) >> 8];
+                prog_ctr += 2;
+                break;
+            case 0x001E: 
+                if(idx_reg + V_reg[(opcode & 0x0F00) >> 8] > 0xFFF){
+                    V_reg[0xF] = 1;
+                }
+                else{
+                    V_reg[0xF] = 0;
+                }
+                idx_reg += V_reg[(opcode & 0x0F00) >> 8];
+                prog_ctr += 2;
+                break;
+            case 0x0029: 
+                idx_reg = V_reg[(opcode & 0x0F00) >> 8] * 0x5;
+                prog_ctr += 2;
+                break;
+            case 0x0033:
+                memory[idx_reg] = V_reg[(opcode & 0x0F00) >> 8] / 100;
+                memory[idx_reg + 1] = (V_reg[(opcode & 0x0F00) >> 8] / 10) % 10;
+                memory[idx_reg + 2] = (V_reg[(opcode & 0x0F00) >> 8] % 100) % 10;
+                prog_ctr += 2;
+                break;
+            case 0x0055: 
+                for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
+                    memory[idx_reg + i] = V_reg[i];
+                }
+                idx_reg += ((opcode & 0x0F00) >> 8) + 1;
+                prog_ctr += 2;
+                break;
+            case 0x0065: 
+                for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
+                    V_reg[i] = memory[idx_reg + i];
+                }
+                idx_reg += ((opcode & 0x0F00) >> 8) + 1;
+                prog_ctr += 2;
+                break;
+            default:
+                cout << "Unknown opcode [0xF000]: 0x" << hex << opcode << endl;
                 break;
         }
     };
@@ -260,6 +406,7 @@ void chip8::emulateCycle(){
 void chip8::processOpcode(){
 
     uint16_t opcodePrefix = opcode & 0xF000;
+
     // Find corresponding handler in the map
     auto it = opcodeHandlers.find(opcodePrefix);
 
@@ -273,14 +420,14 @@ void chip8::processOpcode(){
 void chip8::updateTimers(){
 
     if (delay_timer > 0){
-        --delay_timer;
+        delay_timer--;
     }
 
     if (sound_timer > 0){
         if (sound_timer == 1){
             cout << "BEEP!" << endl;
         }
-        --sound_timer;
+        sound_timer--;
     }
 
 }
