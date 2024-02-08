@@ -32,8 +32,13 @@ unsigned char chip8_fontset[80] =
 using OpcodeHandler = function<void(uint16_t)>;
 unordered_map<uint16_t, OpcodeHandler> opcodeHandlers;
 
+// Constructors and destructors (empty) - forgot to declare
+// Assumed not declaring would give default ones, but undefined symbols received
+// Chip8::Chip8(){}
+// Chip8::~Chip8(){}
+
 // Function to initialize the chip8 vir. cpu state
-void chip8::initialize(){
+void Chip8::initialize(){
 
     // Seed the rnd. w/ current time on each init.
     srand(time(NULL));
@@ -71,7 +76,7 @@ void chip8::initialize(){
 }
 
 // Function to load a given program for chip8 into memory
-bool chip8::loadApp(const string& filename){
+bool Chip8::loadApp(const string& filename){
 
     initialize();
     cout << "Loading: " << filename << endl;
@@ -107,7 +112,7 @@ bool chip8::loadApp(const string& filename){
 
 }
 
-void chip8::initOpcodeHandlers(){
+void Chip8::initOpcodeHandlers(){
 
     // 0x0000
     opcodeHandlers[0x0000] = [this](uint16_t opcode){
@@ -397,27 +402,26 @@ void chip8::initOpcodeHandlers(){
 }
 
 // Function to emulate single cycle
-void chip8::emulateCycle(){
+void Chip8::emulateCycle(){
     opcode = memory[prog_ctr] << 8 | memory[prog_ctr + 1];
     processOpcode();
     updateTimers();
 }
 
-void chip8::processOpcode(){
+void Chip8::processOpcode(){
 
     uint16_t opcodePrefix = opcode & 0xF000;
-
-    // Find corresponding handler in the map
     auto it = opcodeHandlers.find(opcodePrefix);
 
     if (it != opcodeHandlers.end()){
         it->second(opcode);
-    } else{
-        cout << "Unknown Opcode: " << opcode << endl;
+    } 
+    else{
+        cout << "Unknown Opcode: " << hex << opcode << endl;
     }
 }
 
-void chip8::updateTimers(){
+void Chip8::updateTimers(){
 
     if (delay_timer > 0){
         delay_timer--;
@@ -425,7 +429,7 @@ void chip8::updateTimers(){
 
     if (sound_timer > 0){
         if (sound_timer == 1){
-            cout << "BEEP!" << endl;
+            cout << "INT. SPK. SOUND" << endl;
         }
         sound_timer--;
     }

@@ -6,13 +6,13 @@
 
 using namespace::std;
 
-class chip8{
+class Chip8{
 
     protected:
-        static constexpr size_t MEMORY_SIZE = 4096;
-        static constexpr size_t REG_CNT = 16;
-        static constexpr size_t STK_SIZE = 16;
-        static constexpr size_t GFX_BUFFER_SIZE = 64 * 32;
+        static const size_t MEMORY_SIZE = 4096;
+        static const size_t REG_CNT = 16;
+        static const size_t STK_SIZE = 16;
+        static const size_t GFX_BUFFER_SIZE = 64 * 32;
     
     private:
         uint16_t opcode;              // Current OP code
@@ -30,7 +30,10 @@ class chip8{
 
         void initialize();
 
-    public:             
+    public:     
+        // Chip8();
+        // ~Chip8();
+
         array<uint8_t, 16> keypad;
         array<uint8_t, GFX_BUFFER_SIZE> gfx_buffer;        
         bool drawingFlag;
@@ -39,5 +42,5 @@ class chip8{
         void processOpcode();
         void initOpcodeHandlers();
         void updateTimers();
-		bool loadApp(const string &filename);
+		bool loadApp(const string &);
 };
