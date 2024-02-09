@@ -43,7 +43,7 @@ void Chip8::initialize(){
     // Seed the rnd. w/ current time on each init.
     srand(time(NULL));
 
-    prog_ctr = '0x200';
+    prog_ctr = 0x200;
     idx_reg = 0;
     opcode = 0;
     stk_ptr = 0;
