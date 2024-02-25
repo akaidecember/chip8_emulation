@@ -1,4 +1,4 @@
-# Chip8 Emulator (README and PROJECT are WIP !!!)
+# Chip8 Emulator 
 
 This project is a simple Chip8 emulator implemented in C++. Chip8 is an interpreted programming language used in vintage computers, primarily video game consoles, in the late 1970s and early 1980s. This emulator allows you to run Chip8 programs on modern computers.
 
