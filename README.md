@@ -1,72 +1,54 @@
-# Chip8 Emulator 
+# Mandelbrot CUDA
 
-This project is a simple Chip8 emulator implemented in C++. Chip8 is an interpreted programming language used in vintage computers, primarily video game consoles, in the late 1970s and early 1980s. This emulator allows you to run Chip8 programs on modern computers.
+This project is a CUDA-accelerated Mandelbrot set visualizer implemented in C++. The primary objective of this project is to provide a platform for practicing CUDA programming while exploring various fun ideas associated with fractal visualization.
 
 ## Project Overview
 
-The project consists of the following files:
+The project comprises several files, each serving a distinct purpose:
 
-- `main.cpp`: Contains the main function where the emulator is initialized and run.
-- `chip8.cpp`: Contains the implementation of the `Chip8` class, which represents the Chip8 emulator.
-- `chip8.h`: Contains the declaration of the `Chip8` class and other necessary declarations.
+- `main.cpp`: Main entry point of the application where the Mandelbrot set visualization is initialized and managed.
+- `mandelbrot.cu`: CUDA kernel implementation for calculating Mandelbrot set fractals efficiently using GPU parallelization.
+- `hud.cpp` and `hud.h`: Implementation and declaration of the Heads-Up Display (HUD) functionality, allowing users to interact with and control the Mandelbrot visualization.
+- `utils.cpp` and `utils.h`: Utility functions used across the project for tasks such as handling user input and managing display settings.
 
 ## Dependencies
 
-The project depends on the Simple DirectMedia Layer (SDL) library for handling graphics and user input. Make sure you have SDL2 installed on your system before building the project.
+The project relies on both CUDA and SFML libraries:
+
+- **CUDA**: The NVIDIA CUDA Toolkit is essential for GPU parallelization and computation.
+- **SFML**: The Simple and Fast Multimedia Library (SFML) is used for graphical output and user interaction. Make sure to link the appropriate SFML libraries based on your platform (Windows or Linux).
 
 ## Building Instructions
 
-To build the project, you can use the provided Makefile. Make sure you have `g++` installed on your system.
+### On Windows
 
-```bash
-make chip8
-```
+- Install CUDA Toolkit, SFML, and Visual Studio with MSVC compiler.
+- Ensure the required SFML libraries are linked dynamically or statically as per your preference.
+- Set the appropriate compiler flags, such as `SFML_STATIC` for static linking if required.
+- Compile the project using Visual Studio or any preferred IDE, ensuring all necessary dependencies are correctly configured.
 
-This will compile the source files and link them together to produce an executable named `run`.
+### On Linux
 
-To clean up the compiled files, you can use:
-
-```bash
-make clean
-```
+- Install CUDA Toolkit and SFML on your system.
+- Compile the project using appropriate compiler commands or provided build scripts.
+- Ensure dynamic linking with SFML libraries, as static linking is generally discouraged on Linux.
 
 ## Usage
 
-After building the project, you can run the emulator by executing the generated executable:
+After successfully building the project, you can run the Mandelbrot visualization application. Depending on your platform and build settings, execute the generated executable with appropriate command-line arguments or flags.
 
-```bash
-./run
-```
+The application provides various controls for navigating and interacting with the Mandelbrot set visualization:
 
-The emulator will start, and you will see a window representing the Chip8 display. You can then load Chip8 ROMs into the emulator and interact with them using the keyboard.
-
-## Chip8 ROMs
-
-You can find various Chip8 ROMs available online. These ROMs contain programs and games written in the Chip8 programming language. Place the ROM files in the same directory as the executable (`run`) and load them into the emulator from the user interface.
-
-(Some of the roms used are included in the repo under /roms)
-
-## Controls
-
-The keyboard layout for controlling the emulator is as follows:
-
-```
-Chip8 Keypad      Keyboard
-+-+-+-+-+        +-+-+-+-+
-|1|2|3|C|        |1|2|3|4|
-+-+-+-+-+   =>   +-+-+-+-+
-|4|5|6|D|        |Q|W|E|R|
-+-+-+-+-+        +-+-+-+-+
-|7|8|9|E|        |A|S|D|F|
-+-+-+-+-+        +-+-+-+-+
-|A|0|B|F|        |Z|X|C|V|
-+-+-+-+-+        +-+-+-+-+
-```
+- **Move**: Use arrow keys, WSAD, or mouse clicks to navigate within the fractal space.
+- **Zoom In/Out**: Adjust zoom level using mouse wheel or `+/-` keys.
+- **Increase/Decrease Max Iteration**: Modify maximum iteration count using `E/Q` keys.
+- **Reset**: Reset the visualization to its initial state using `R` key.
+- **Hide/Show HUD**: Toggle visibility of the Heads-Up Display using `H` key.
 
 ## Contributing
 
-Contributions are welcome! If you find any issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
+Contributions to the project are encouraged and welcomed. If you have any ideas for improvements, encounter issues, or wish to suggest new features, feel free to open an issue or submit a pull request on the project's repository.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under [MIT License](LICENSE). Feel free to use, modify, and distribute the code for both personal and commercial purposes, with appropriate attribution to the original authors.
