@@ -1,4 +1,4 @@
-/.vscode
-out.dSYM
-out
-.DS_Store
+.vscode
+src/out.dSYM
+src/out
+src/.DS_Store
