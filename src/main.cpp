@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 
             // Store pixels in temporary buffer
             for(int i = 0; i < 2048; ++i){
-                uint8_t pixel = chip8.gfx_buffer[i];
+                uint8_t pixel = chip8.gfxBuffer[i];
                 pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
             }
 

@@ -32,21 +32,16 @@ unsigned char chip8_fontset[80] =
 using OpcodeHandler = function<void(uint16_t)>;
 unordered_map<uint16_t, OpcodeHandler> opcodeHandlers;
 
-// Constructors and destructors (empty) - forgot to declare
-// Assumed not declaring would give default ones, but undefined symbols received
-// Chip8::Chip8(){}
-// Chip8::~Chip8(){}
-
 // Function to initialize the chip8 vir. cpu state
 void Chip8::initialize(){
 
     // Seed the rnd. w/ current time on each init.
     srand(time(NULL));
 
-    prog_ctr = 0x200;
-    idx_reg = 0;
+    progCtr = 0x200;
+    idxReg = 0;
     opcode = 0;
-    stk_ptr = 0;
+    stkPtr = 0;
 
     // Clearing the stack, V-registers and the keypad
     // Used STK_SIZE = 16, but can use others. They're same
@@ -67,11 +62,14 @@ void Chip8::initialize(){
     }
 
     // Reset the timers
-    delay_timer = 0;
-    sound_timer = 0;
+    delayTimer = 0;
+    soundTimer = 0;
 
     // Setting the drawing flag
     drawingFlag = true;
+
+    // Initialize the opcode handlers
+    initOpcodeHandlers();
  
 }
 
@@ -107,6 +105,7 @@ bool Chip8::loadApp(const string& filename){
 
     // Copy buffer to Chip8 memory
     copy(buffer.begin(), buffer.end(), memory.begin() + 512);
+    cout << "Loaded " << filename << " successfully..." << endl;
 
     return true;
 
@@ -119,15 +118,15 @@ void Chip8::initOpcodeHandlers(){
         switch(opcode & 0x000F) {
             case 0x0000: 
                 for(int i = 0; i < GFX_BUFFER_SIZE; ++i){
-				    gfx_buffer[i] = 0x0;
+				    gfxBuffer[i] = 0x0;
                 }
 				drawingFlag = true;
-				prog_ctr += 2;
+				progCtr += 2;
                 break;
             case 0x000E: 
-                stk_ptr--;
-                prog_ctr = stack[stk_ptr];
-                prog_ctr += 2;
+                stkPtr--;
+                progCtr = stack[stkPtr];
+                progCtr += 2;
                 break;
             default:
                 cout << "Unknown opcode [0x0000]: 0x" << hex << opcode << endl;
@@ -137,56 +136,56 @@ void Chip8::initOpcodeHandlers(){
 
     // 0x1000
     opcodeHandlers[0x1000] = [this](uint16_t opcode){
-        prog_ctr = opcode & 0x0FFF;
+        progCtr = opcode & 0x0FFF;
     };
 
     // 0x2000
     opcodeHandlers[0x2000] = [this](uint16_t opcode){
-        stack[stk_ptr] = prog_ctr;
-        ++stk_ptr;
-        prog_ctr = opcode & 0x0FFF;
+        stack[stkPtr] = progCtr;
+        ++stkPtr;
+        progCtr = opcode & 0x0FFF;
     };
 
     // 0x3000
     opcodeHandlers[0x3000] = [this](uint16_t opcode){
         if(V_reg[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF)){
-            prog_ctr += 4;
+            progCtr += 4;
         }
         else{
-            prog_ctr += 2;
+            progCtr += 2;
         }
     };
 
     // 0x4000
     opcodeHandlers[0x4000] = [this](uint16_t opcode){
         if(V_reg[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF)){
-            prog_ctr += 4;
+            progCtr += 4;
         }
         else{
-            prog_ctr += 2;
+            progCtr += 2;
         }
     };
 
     // 0x5000
     opcodeHandlers[0x5000] = [this](uint16_t opcode){
         if(V_reg[(opcode & 0x0F00) >> 8] == V_reg[(opcode & 0x00F0) >> 4]){
-            prog_ctr += 4;
+            progCtr += 4;
         }
         else{
-            prog_ctr += 2;
+            progCtr += 2;
         }
     };
 
     // 0x6000
     opcodeHandlers[0x6000] = [this](uint16_t opcode){
         V_reg[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
-        prog_ctr += 2;
+        progCtr += 2;
     };
 
     // 0x7000
     opcodeHandlers[0x7000] = [this](uint16_t opcode){
         V_reg[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
-		prog_ctr += 2;
+		progCtr += 2;
     };
 
     // 0x8000
@@ -194,19 +193,19 @@ void Chip8::initOpcodeHandlers(){
         switch(opcode & 0x000F) {
             case 0x0000: 
                 V_reg[(opcode & 0x0F00) >> 8] = V_reg[(opcode & 0x00F0) >> 4];
-				prog_ctr += 2;
+				progCtr += 2;
                 break;
             case 0x0001:
                 V_reg[(opcode & 0x0F00) >> 8] |= V_reg[(opcode & 0x00F0) >> 4];
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x0002:
                 V_reg[(opcode & 0x0F00) >> 8] &= V_reg[(opcode & 0x00F0) >> 4];
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x0003:
                 V_reg[(opcode & 0x0F00) >> 8] ^= V_reg[(opcode & 0x00F0) >> 4];
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x0004:
                 if(V_reg[(opcode & 0x00F0) >> 4] > (0xFF - V_reg[(opcode & 0x0F00) >> 8])){
@@ -216,7 +215,7 @@ void Chip8::initOpcodeHandlers(){
                     V_reg[0xF] = 0;
                 }
                 V_reg[(opcode & 0x0F00) >> 8] += V_reg[(opcode & 0x00F0) >> 4];
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x0005:
                 if(V_reg[(opcode & 0x00F0) >> 4] > V_reg[(opcode & 0x00F0) >> 8]){
@@ -226,12 +225,12 @@ void Chip8::initOpcodeHandlers(){
                     V_reg[0xF] = 1;
                 }
                 V_reg[(opcode & 0x0F00) >> 8] -= V_reg[(opcode & 0x00F0) >> 4];
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x0006:
                 V_reg[0xF] = V_reg[(opcode & 0x0F00) >> 8] & 0x1;
                 V_reg[(opcode & 0x0F00) >> 8] >>= 1;
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x0007:
                 if(V_reg[(opcode & 0x0F00) >> 8] > V_reg[(opcode & 0x00F0) >> 4]){
@@ -241,12 +240,12 @@ void Chip8::initOpcodeHandlers(){
                     V_reg[0xF] = 1;
                 }
                 V_reg[(opcode & 0x0F00) >> 8] = V_reg[(opcode & 0x00F0) >> 4] - V_reg[(opcode & 0x0F00) >> 8];				
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             case 0x000E: 
 				V_reg[0xF] = V_reg[(opcode & 0x0F00) >> 8] >> 7;
 				V_reg[(opcode & 0x0F00) >> 8] <<= 1;
-				prog_ctr += 2;
+				progCtr += 2;
                 break;
             default:
                 cout << "Unknown opcode [0x8000]: 0x" << hex << opcode << endl;
@@ -257,28 +256,28 @@ void Chip8::initOpcodeHandlers(){
     // 0x9000
     opcodeHandlers[0x9000] = [this](uint16_t opcode){
         if(V_reg[(opcode & 0x0F00) >> 8] != V_reg[(opcode & 0x00F0) >> 4]){
-            prog_ctr += 4;
+            progCtr += 4;
         }
         else{
-            prog_ctr += 2;
+            progCtr += 2;
         }
     };
 
     // 0xA000
     opcodeHandlers[0xA000] = [this](uint16_t opcode){
-        idx_reg = opcode & 0x0FFF;
-        prog_ctr += 2;
+        idxReg = opcode & 0x0FFF;
+        progCtr += 2;
     };
 
     // 0xB000
     opcodeHandlers[0xB000] = [this](uint16_t opcode){
-        prog_ctr = (opcode & 0x0FFF) + V_reg[0];
+        progCtr = (opcode & 0x0FFF) + V_reg[0];
     };
 
     // 0xC000
     opcodeHandlers[0xC000] = [this](uint16_t opcode){
 		V_reg[(opcode & 0x0F00) >> 8] = (rand() % 0xFF) & (opcode & 0x00FF);
-		prog_ctr += 2;
+		progCtr += 2;
     };
 
     // 0xD000
@@ -290,37 +289,37 @@ void Chip8::initOpcodeHandlers(){
 
         V_reg[0xF] = 0;
         for(int i = 0; i < h; i++){
-            pixel = memory[idx_reg + i];
+            pixel = memory[idxReg + i];
             for(int j = 0; j < 8; j++){
                 if(((0x80 >> j) & pixel) != 0){
-                    if(gfx_buffer[(x_ax + j + ((y_ax + i) * 64))] == 1){
+                    if(gfxBuffer[(x_ax + j + ((y_ax + i) * 64))] == 1){
                         V_reg[0xF] = 1;
                     }
-                    gfx_buffer[j + x_ax + ((y_ax + i) * 64)] ^= 1;
+                    gfxBuffer[j + x_ax + ((y_ax + i) * 64)] ^= 1;
                 }
             }
         }
         drawingFlag = true;
-        prog_ctr += 2;
+        progCtr += 2;
     };
 
     // 0xE000
     opcodeHandlers[0xE000] = [this](uint16_t opcode){
         switch(opcode & 0x00FF) {
             case 0x009E: 
-                if (keypad[V_reg[(opcode & 0x0F00) >> 8]] != 0){
-                    prog_ctr += 4;
+                if(keypad[V_reg[(opcode & 0x0F00) >> 8]] != 0){
+                    progCtr += 4;
                 }
                 else{
-                    prog_ctr += 2;
+                    progCtr += 2;
                 }
                 break;
             case 0x00A1: 
-                if (keypad[V_reg[(opcode & 0x0F00) >> 8]] == 0){
-                    prog_ctr += 4;
+                if(keypad[V_reg[(opcode & 0x0F00) >> 8]] == 0){
+                    progCtr += 4;
                 }
                 else{
-                    prog_ctr += 2;
+                    progCtr += 2;
                 }
                 break;
             default:
@@ -333,8 +332,8 @@ void Chip8::initOpcodeHandlers(){
     opcodeHandlers[0xF000] = [this](uint16_t opcode){
         switch(opcode & 0x00FF) {
             case 0x0007: 
-                V_reg[(opcode & 0x0F00) >> 8] = delay_timer;
-                prog_ctr += 2;
+                V_reg[(opcode & 0x0F00) >> 8] = delayTimer;
+                progCtr += 2;
                 break;
             case 0x000A: 
             {
@@ -348,50 +347,50 @@ void Chip8::initOpcodeHandlers(){
                 }
                 if(!kp) return;
 
-                prog_ctr += 2;
+                progCtr += 2;
                 break;
             }
             case 0x0015: 
-                delay_timer = V_reg[(opcode & 0x0F00) >> 8];
-                prog_ctr += 2;
+                delayTimer = V_reg[(opcode & 0x0F00) >> 8];
+                progCtr += 2;
                 break;
             case 0x0018: 
-                sound_timer = V_reg[(opcode & 0x0F00) >> 8];
-                prog_ctr += 2;
+                soundTimer = V_reg[(opcode & 0x0F00) >> 8];
+                progCtr += 2;
                 break;
             case 0x001E: 
-                if(idx_reg + V_reg[(opcode & 0x0F00) >> 8] > 0xFFF){
+                if(idxReg + V_reg[(opcode & 0x0F00) >> 8] > 0xFFF){
                     V_reg[0xF] = 1;
                 }
                 else{
                     V_reg[0xF] = 0;
                 }
-                idx_reg += V_reg[(opcode & 0x0F00) >> 8];
-                prog_ctr += 2;
+                idxReg += V_reg[(opcode & 0x0F00) >> 8];
+                progCtr += 2;
                 break;
             case 0x0029: 
-                idx_reg = V_reg[(opcode & 0x0F00) >> 8] * 0x5;
-                prog_ctr += 2;
+                idxReg = V_reg[(opcode & 0x0F00) >> 8] * 0x5;
+                progCtr += 2;
                 break;
             case 0x0033:
-                memory[idx_reg] = V_reg[(opcode & 0x0F00) >> 8] / 100;
-                memory[idx_reg + 1] = (V_reg[(opcode & 0x0F00) >> 8] / 10) % 10;
-                memory[idx_reg + 2] = (V_reg[(opcode & 0x0F00) >> 8] % 100) % 10;
-                prog_ctr += 2;
+                memory[idxReg] = V_reg[(opcode & 0x0F00) >> 8] / 100;
+                memory[idxReg + 1] = (V_reg[(opcode & 0x0F00) >> 8] / 10) % 10;
+                memory[idxReg + 2] = (V_reg[(opcode & 0x0F00) >> 8] % 100) % 10;
+                progCtr += 2;
                 break;
             case 0x0055: 
                 for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
-                    memory[idx_reg + i] = V_reg[i];
+                    memory[idxReg + i] = V_reg[i];
                 }
-                idx_reg += ((opcode & 0x0F00) >> 8) + 1;
-                prog_ctr += 2;
+                idxReg += ((opcode & 0x0F00) >> 8) + 1;
+                progCtr += 2;
                 break;
             case 0x0065: 
                 for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
-                    V_reg[i] = memory[idx_reg + i];
+                    V_reg[i] = memory[idxReg + i];
                 }
-                idx_reg += ((opcode & 0x0F00) >> 8) + 1;
-                prog_ctr += 2;
+                idxReg += ((opcode & 0x0F00) >> 8) + 1;
+                progCtr += 2;
                 break;
             default:
                 cout << "Unknown opcode [0xF000]: 0x" << hex << opcode << endl;
@@ -403,7 +402,7 @@ void Chip8::initOpcodeHandlers(){
 
 // Function to emulate single cycle
 void Chip8::emulateCycle(){
-    opcode = memory[prog_ctr] << 8 | memory[prog_ctr + 1];
+    opcode = (memory[progCtr] << 8) | memory[progCtr + 1];
     processOpcode();
     updateTimers();
 }
@@ -413,25 +412,26 @@ void Chip8::processOpcode(){
     uint16_t opcodePrefix = opcode & 0xF000;
     auto it = opcodeHandlers.find(opcodePrefix);
 
-    if (it != opcodeHandlers.end()){
+    if(it != opcodeHandlers.end()){
         it->second(opcode);
     } 
     else{
-        cout << "Unknown Opcode: " << hex << opcode << endl;
+        cout << "Unknown Opcode [processing]: 0x" << hex << opcode << endl;
+        cout << "Prefix : 0x" << hex << opcodePrefix << endl;
     }
 }
 
 void Chip8::updateTimers(){
 
-    if (delay_timer > 0){
-        delay_timer--;
+    if(delayTimer > 0){
+        delayTimer--;
     }
 
-    if (sound_timer > 0){
-        if (sound_timer == 1){
-            cout << "INT. SPK. SOUND" << endl;
+    if(soundTimer > 0){
+        if(soundTimer == 1){
+            cout << "SOUND" << endl;
         }
-        sound_timer--;
+        soundTimer--;
     }
 
 }

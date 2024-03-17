@@ -16,26 +16,23 @@ class Chip8{
     
     private:
         uint16_t opcode;              // Current OP code
-        uint16_t idx_reg;             // Index register
-        uint16_t prog_ctr;            // Program counter
+        uint16_t idxReg;             // Index register
+        uint16_t progCtr;            // Program counter
 
         array<uint8_t, MEMORY_SIZE> memory;
         array<uint8_t, REG_CNT> V_reg;
 
-        uint8_t delay_timer;
-        uint8_t sound_timer;
+        uint8_t delayTimer;
+        uint8_t soundTimer;
 
         array<uint16_t, STK_SIZE> stack;      
-        uint16_t stk_ptr;             
+        uint16_t stkPtr;             
 
         void initialize();
 
-    public:     
-        // Chip8();
-        // ~Chip8();
-
+    public:    
         array<uint8_t, 16> keypad;
-        array<uint8_t, GFX_BUFFER_SIZE> gfx_buffer;        
+        array<uint8_t, GFX_BUFFER_SIZE> gfxBuffer;        
         bool drawingFlag;
 
         void emulateCycle();

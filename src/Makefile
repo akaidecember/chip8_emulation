@@ -1,5 +1,8 @@
-chip8:
-	g++ main.cpp chip8.cpp -std=c++11 -o run -I include -L lib -l SDL2-2.0.0
-	
+run:
+	clang++ main.cpp chip8.cpp -std=c++11 -g -Wall -Wextra -o out -Iinclude -Llib -lSDL2-2.0.0
+
 clean:
-	rm -f run
+	rm -f out
+
+play:
+	./out rom/Airplane.ch8
